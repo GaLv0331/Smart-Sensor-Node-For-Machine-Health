@@ -6,7 +6,7 @@
 
 ## 1. Features
 
-### 1.1 Mult Sensor Machine Health Monitoring
+### 1.1 Multi Sensor Machine Health Monitoring
 
 The system monitors multiple physical parameters that are critical for assessing the health of rotating machinery.
 
@@ -31,12 +31,7 @@ The STM32F407 microcontroller performs all real time data processing locally at 
 
 * Sensor data acquisition
 * Signal conditioning and filtering
-* Feature extraction, including:
-
-  * RMS
-  * Mean
-  * Peak
-  * Variance
+* Feature extraction (RMS,Mean,Peak,Variance)
 
 This approach reduces raw data transmission and improves real time responsiveness.
 
@@ -49,7 +44,6 @@ A lightweight TinyML model is deployed directly on the STM32 microcontroller.
 **Capabilities:**
 
 * Detects machine operating states:
-
   * **Normal**
   * **Warning**
   * **Fault**
@@ -78,12 +72,10 @@ A dual controller architecture is used to separate processing and communication 
 **Architecture Details:**
 
 * **ESP32** is used exclusively for:
-
   * WiFi connectivity
   * MQTT communication
-* **STM32 ↔ ESP32 communication** via UART or SPI
+* **STM32 <-> ESP32 communication** via UART or SPI
 * MQTT data published to **AWS IoT Core**, including:
-
   * Machine health status
   * Alerts
   * Aggregated sensor metrics
@@ -140,10 +132,8 @@ The focus is on early fault detection rather than corrective control.
 Cloud based monitoring depends on ESP32 WiFi connectivity.
 
 * If WiFi is available:
-
   * Cloud visualization and alerts function normally
 * If WiFi fails:
-
   * Local TinyML inference continues to operate
   * Cloud visualization and updates stop
 
@@ -168,7 +158,6 @@ Cost effective sensors are used to maintain feasibility.
 
 * Not laboratory grade or calibration grade sensors
 * Accuracy is sufficient for:
-
   * Trend detection
   * Fault classification
 * Not suitable for precision measurement applications
@@ -191,7 +180,6 @@ The TinyML model is trained on a small, controlled dataset.
 
 * Dataset size is limited
 * Focus is on:
-
   * Methodology
   * End to end workflow
 * Not aimed at large scale industrial generalization
@@ -203,7 +191,6 @@ The TinyML model is trained on a small, controlled dataset.
 The system is validated on a single rotating machine.
 
 * Example machines:
-
   * Table fan
   * Motor
 * Not designed for multi machine or complex industrial setups
