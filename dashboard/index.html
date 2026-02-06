@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Machine Health Dashboard</title>
+
+  <!-- Chart.js (stable CDN) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      padding: 20px;
+    }
+    h2 {
+      margin-bottom: 10px;
+    }
+    .card {
+      background: white;
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .ok {
+      color: green;
+      font-weight: bold;
+    }
+    .alert {
+      color: red;
+      font-weight: bold;
+    }
+    select {
+      padding: 6px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+
+<h2>Machine Health Dashboard</h2>
+
+<!-- DEVICE SELECT -->
+<div class="card">
+  <label><b>Select Device:</b></label>
+  <select id="deviceSelect"></select>
+</div>
+
+<!-- LIVE DATA -->
+<div class="card">
+  <p>Current: <span id="current">--</span></p>
+  <p>Vibration: <span id="vibration">--</span></p>
+  <p>Status: <span id="status">--</span></p>
+  <p>Last Update: <span id="timestamp">--</span></p>
+</div>
+
+<!-- HISTORY CHART -->
+<div class="card">
+  <h3>History (Last 60 Minutes)</h3>
+  <canvas id="historyChart" height="300"></canvas>
+</div>
+
+<script>
+/* ================= CONFIG ================= */
+
+const API_BASE = "https://msu1snab19.execute-api.ap-south-1.amazonaws.com";
+let historyChart = null;
+
+/* ================= LOAD DEVICES ================= */
+
+async function loadDevices() {
+  const res = await fetch(`${API_BASE}/devices`);
+  const devices = await res.json();
+
+  const select = document.getElementById("deviceSelect");
+  select.innerHTML = "";
+
+  devices.forEach(device => {
+    const opt = document.createElement("option");
+    opt.value = device;
+    opt.textContent = device;
+    select.appendChild(opt);
+  });
+
+  if (devices.length > 0) {
+    loadLatest(devices[0]);
+    loadHistory(devices[0]);
+  }
+}
+
+/* ================= LOAD LATEST ================= */
+
+async function loadLatest(device) {
+  const res = await fetch(`${API_BASE}/latest?device=${device}`);
+  const data = await res.json();
+
+  document.getElementById("current").textContent =
+    data.current !== undefined ? data.current : "--";
+  document.getElementById("vibration").textContent =
+    data.vibration !== undefined ? data.vibration : "--";
+
+  document.getElementById("timestamp").textContent =
+    data.timestamp ? new Date(data.timestamp).toLocaleString() : "--";
+
+  const statusEl = document.getElementById("status");
+  if (data.anomaly === 1) {
+    statusEl.textContent = "ANOMALY";
+    statusEl.className = "alert";
+  } else {
+    statusEl.textContent = "NORMAL";
+    statusEl.className = "ok";
+  }
+}
+
+/* ================= LOAD HISTORY (REAL DATA) ================= */
+
+async function loadHistory(device) {
+  const res = await fetch(
+    `${API_BASE}/history?device=${device}&minutes=60`
+  );
+  let data = await res.json();
+
+  if (!Array.isArray(data) || data.length === 0) return;
+
+  data.sort((a, b) => a.timestamp - b.timestamp);
+
+  const labels = data.map(d =>
+    new Date(d.timestamp).toLocaleTimeString()
+  );
+  const currentData = data.map(d => d.current);
+  const vibrationData = data.map(d => d.vibration);
+
+  const ctx = document.getElementById("historyChart").getContext("2d");
+
+  // 🔥 CREATE CHART ONLY ONCE
+  if (!historyChart) {
+    historyChart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Current",
+            data: currentData,
+            borderColor: "blue",
+            tension: 0.3
+          },
+          {
+            label: "Vibration",
+            data: vibrationData,
+            borderColor: "red",
+            tension: 0.3
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        animation: false,   // smoother updates
+        scales: {
+          y: { beginAtZero: false }
+        }
+      }
+    });
+  } 
+  // 🔁 UPDATE EXISTING CHART
+  else {
+    historyChart.data.labels = labels;
+    historyChart.data.datasets[0].data = currentData;
+    historyChart.data.datasets[1].data = vibrationData;
+    historyChart.update();
+  }
+}
+
+
+/* ================= EVENTS ================= */
+
+document.getElementById("deviceSelect").addEventListener("change", e => {
+  const device = e.target.value;
+  loadLatest(device);
+  loadHistory(device);
+});
+
+/* ================= AUTO REFRESH ================= */
+
+window.onload = () => {
+  loadDevices();
+
+  setInterval(() => {
+    const device = document.getElementById("deviceSelect").value;
+    if (device) {
+      loadLatest(device);
+      loadHistory(device);
+    }
+  }, 5000);
+};
+</script>
+
+</body>
+</html>
